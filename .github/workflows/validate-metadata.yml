@@ -9,6 +9,254 @@ on:
       - "force-app/**"
 
 jobs:
-  validate-metadata:
-    name: "Validate Metadata"
-    uses: "Szandor72/devops-center-actions/.github/workflows/validate-metadata.yml@main"
+  pmd-sobject:
+    runs-on: ubuntu-latest
+    name: "PMD for sObjects"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+
+      # No more references
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # caching node_modules
+          path: |
+            node_modules
+            ~/.cache/sf/yarn
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies and copy config files and rules
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefer-offline --no-audit
+        shell: bash
+
+      - name: Copy config files and rules only
+        if: steps.cache-nodemodules.outputs.cache-hit == 'true'
+        run: |
+          npm run postinstall
+        shell: bash
+
+      - name: Install SF CLI and SFDX Scanner Plugin
+        run: |
+          npm install @salesforce/cli --location=global
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
+        shell: bash
+
+      - name: "Show Rule Details"
+        run: |
+          cat ./.pmd/sobject-ruleset.xml
+
+      - name: "Fetch all Files and prepare scan"
+        run: |
+          git fetch --all
+          node .ci/prepare-scan.js
+
+      - name: "Scan sObjects and Custom Fields"
+        run: |
+          sf scanner run --engine pmd --target "./force-app/**/*.field-meta.xml,./force-app/**/*.object-meta.xml" --pmdconfig ./.pmd/sobject-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
+      - name: "Handle Scan Results"
+        if: failure()
+        run: |
+          node .ci/parse-scan-results.js
+
+  pmd-flow:
+    runs-on: ubuntu-latest
+    name: "PMD for Flows"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # caching node_modules
+          path: |
+            node_modules
+            ~/.cache/sf/yarn
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies and copy config files and rules
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefer-offline --no-audit
+        shell: bash
+
+      - name: Copy config files and rules only
+        if: steps.cache-nodemodules.outputs.cache-hit == 'true'
+        run: |
+          npm run postinstall
+        shell: bash
+
+      - name: Install SF CLI and SFDX Scanner Plugin
+        run: |
+          npm install @salesforce/cli --location=global
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
+        shell: bash
+
+      - name: "Show Rule Details"
+        run: |
+          cat ./.pmd/flow-ruleset.xml
+
+      - name: "Fetch all Files and prepare scan"
+        run: |
+          git fetch --all
+          node .ci/prepare-scan.js
+
+      - name: "Scan Flows"
+        run: |
+          sf scanner run --engine pmd --target "./force-app/**/*.flow-meta.xml" --pmdconfig ./.pmd/flow-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
+      - name: "Handle Scan Results"
+        if: failure()
+        run: |
+          node .ci/parse-scan-results.js
+
+  pmd-misc:
+    runs-on: ubuntu-latest
+    name: "PMD for other Metadata"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # caching node_modules
+          path: |
+            node_modules
+            ~/.cache/sf/yarn
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies and copy config files and rules
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefer-offline --no-audit
+        shell: bash
+
+      - name: Copy config files and rules only
+        if: steps.cache-nodemodules.outputs.cache-hit == 'true'
+        run: |
+          npm run postinstall
+        shell: bash
+
+      - name: Install SF CLI and SFDX Scanner Plugin
+        run: |
+          npm install @salesforce/cli --location=global
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
+        shell: bash
+
+      - name: "Show Rule Details"
+        run: |
+          cat ./.pmd/misc-ruleset.xml
+
+      - name: "Fetch all Files and prepare scan"
+        run: |
+          # TODO is fetch --all needed in context of fetch depth above?
+          git fetch --all
+          node .ci/prepare-scan.js
+
+      - name: "Scan Misc"
+        run: |
+          sf scanner run --engine pmd --target "./force-app/" --pmdconfig ./.pmd/misc-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
+      - name: "Handle Scan Results"
+        if: failure()
+        run: |
+          node .ci/parse-scan-results.js
+
+  # commitlint is used to enforce commit message format
+  # Since DevOps Center does its own commit msgs, this cannot be used
+  # commitlint:
+  #   runs-on: ubuntu-latest
+  #   name: "Run Commitlint"
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: wagoid/commitlint-github-action@v5
+
+  # to prettify apex and other metadata, we need to use an older prettier version and also match specific plugin versions
+  prettier-formatting:
+    name: "Format with Prettier"
+    needs: [pmd-sobject, pmd-flow, pmd-misc]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # caching node_modules
+          path: |
+            node_modules
+            ~/.cache/sf/yarn
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies and copy config files and rules
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefer-offline --no-audit
+        shell: bash
+
+      - name: Copy config files and rules only
+        if: steps.cache-nodemodules.outputs.cache-hit == 'true'
+        run: |
+          npm run postinstall
+        shell: bash
+
+      - name: Install SF CLI and SFDX Scanner Plugin
+        run: |
+          npm install @salesforce/cli --location=global
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
+        shell: bash
+
+      - uses: creyD/prettier_action@v4.3
+        with:
+          prettier_version: 2.6.0
+          prettier_options: --write **/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml} --no-error-on-unmatched-pattern
+          # same_commit: True
+          only_changed: True
+          prettier_plugins: "prettier-plugin-apex@1.13.0 @prettier/plugin-xml@2.0.1"
