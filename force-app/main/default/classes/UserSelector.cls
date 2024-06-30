@@ -4,7 +4,7 @@
 public inherited sharing class UserSelector {
   /**
    * @description Get user by Id
-   * @param Id - User record Id
+   * @param userId - User record Id
    * @return User record
    */
   public User getUserById(Id userId) {
@@ -19,7 +19,7 @@ public inherited sharing class UserSelector {
 
   /**
    * @description Get user's by Id's
-   * @param Set<Id> - User records Id
+   * @param usersId - User records Id
    * @return User records
    */
   public List<User> getUsersBySetId(Set<Id> usersId) {
@@ -33,7 +33,7 @@ public inherited sharing class UserSelector {
 
   /**
    * @description Get users by email
-   * @param String - User email
+   * @param email - User email
    * @return User records
    */
   public List<User> getUsersByEmail(String email) {
