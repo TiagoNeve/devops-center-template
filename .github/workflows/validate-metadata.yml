@@ -17,7 +17,43 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
-      - uses: Szandor72/devops-center-actions/.github/install-tooling@main
+
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # caching node_modules
+          path: |
+            node_modules
+            ~/.cache/sf/yarn
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies and copy config files and rules
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --prefer-offline --no-audit
+        shell: bash
+
+      - name: Copy config files and rules only
+        if: steps.cache-nodemodules.outputs.cache-hit == 'true'
+        run: |
+          npm run postinstall
+        shell: bash
+
+      - name: Install SF CLI and SFDX Scanner Plugin
+        run: |
+          npm install @salesforce/cli --location=global
+          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
+            sf plugins install @salesforce/sfdx-scanner@3.26.0
+          fi
+        shell: bash
+
       - name: "Show Rule Details"
         run: |
           cat ./.pmd/sobject-ruleset.xml
