@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
 
       # No more references
@@ -50,18 +51,18 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: "Show Rule Details"
         run: |
           cat ./.pmd/sobject-ruleset.xml
+
       - name: "Fetch all Files and prepare scan"
         run: |
           git fetch --all
           node .ci/prepare-scan.js
+
       - name: "Scan sObjects and Custom Fields"
         run: |
           sf scanner run --engine pmd --target "./force-app/**/*.field-meta.xml,./force-app/**/*.object-meta.xml" --pmdconfig ./.pmd/sobject-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
@@ -78,6 +79,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
 
       - name: Cache node modules
@@ -111,21 +113,22 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: "Show Rule Details"
         run: |
           cat ./.pmd/flow-ruleset.xml
+
       - name: "Fetch all Files and prepare scan"
         run: |
           git fetch --all
           node .ci/prepare-scan.js
+
       - name: "Scan Flows"
         run: |
           sf scanner run --engine pmd --target "./force-app/**/*.flow-meta.xml" --pmdconfig ./.pmd/flow-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
       - name: "Handle Scan Results"
         if: failure()
         run: |
@@ -138,6 +141,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
 
       - name: Cache node modules
@@ -171,22 +175,23 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: "Show Rule Details"
         run: |
           cat ./.pmd/misc-ruleset.xml
+
       - name: "Fetch all Files and prepare scan"
         run: |
           # TODO is fetch --all needed in context of fetch depth above?
           git fetch --all
           node .ci/prepare-scan.js
-      - name: "Scan Flows"
+
+      - name: "Scan Misc"
         run: |
           sf scanner run --engine pmd --target "./force-app/" --pmdconfig ./.pmd/misc-ruleset.xml --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
       - name: "Handle Scan Results"
         if: failure()
         run: |
@@ -245,9 +250,7 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - uses: creyD/prettier_action@v4.3

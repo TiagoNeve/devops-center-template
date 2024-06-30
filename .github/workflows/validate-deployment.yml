@@ -47,9 +47,7 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: "Populate auth file with INTEGRATION_SANDBOX_SFDX_URL secret"
