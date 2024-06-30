@@ -6,7 +6,11 @@ on:
     branches:
       - integration
     paths:
-      - "force-app/**"
+      - "force-app/main/default/classes/**"
+      - "force-app/main/default/lwc/**"
+      - "force-app/main/default/aura/**"
+      - "force-app/main/default/triggers/**"
+      - "force-app/main/default/components/**"
 
 jobs:
   code-scan:
@@ -50,36 +54,37 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: "Fetch all Files and prepare scan"
         run: |
           git fetch --all
           node .ci/prepare-scan.js
-      - name: "Echo INTEGRATION_SANDBOX_SFDX_URL"
-        run: |
-          echo ${{ secrets.INTEGRATION_SANDBOX_SFDX_URL }}
+
       - name: "Populate auth file and log in to Org"
         run: |
           echo ${{ secrets.INTEGRATION_SANDBOX_SFDX_URL}} > ./INTEGRATION_SANDBOX_SFDX_URL.auth
           sf org login sfdx-url --sfdx-url-file ./INTEGRATION_SANDBOX_SFDX_URL.auth --alias integration_sandbox --set-default
+
       - name: "Run Legacy Scan on modified legacy files"
         run: |
           sf scanner run --target ./legacy-metadata/ --engine "pmd,eslint-lwc,retire-js" --category "Security,Performance,problem,Insecure Dependencies" --outfile "legacy-scan-results.json" --format json --normalize-severity
+
       - name: "Parse Legacy Scan Results and Upload to Org"
         run: |
           node .ci/parse-scan-results.js legacy-scan-results.json legacy-scan-results.csv
+
       - name: "Store Legacy Scan Results on GitHub"
         uses: actions/upload-artifact@v3
         with:
           name: legacy-scan-results
           path: legacy-scan-results.csv
+
       - name: "Run Strict Scan on non legacy files"
         run: |
           sf scanner run --target ./force-app/ --severity-threshold 3 --outfile "scan-results.json" --format json --normalize-severity
+
       - name: "Handle Scan Results for non legacy files"
         if: failure()
         run: |
@@ -123,9 +128,7 @@ jobs:
       - name: Install SF CLI and SFDX Scanner Plugin
         run: |
           npm install @salesforce/cli --location=global
-          if [ "${{ inputs.install_sfdx_scanner }}" = "true" ]; then
-            sf plugins install @salesforce/sfdx-scanner@3.26.0
-          fi
+          sf plugins install @salesforce/sfdx-scanner@3.26.0
         shell: bash
 
       - name: Run sfdx-lwc-jest
