@@ -18,6 +18,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
 
+      # No more references
       - name: Cache node modules
         id: cache-nodemodules
         uses: actions/cache@v3
@@ -78,7 +79,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
-      
+
       - name: Cache node modules
         id: cache-nodemodules
         uses: actions/cache@v3
@@ -138,7 +139,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
-      
+
       - name: Cache node modules
         id: cache-nodemodules
         uses: actions/cache@v3
